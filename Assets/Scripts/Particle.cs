@@ -1,6 +1,6 @@
+using System;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.Pool;
 
 public class Particle : MonoBehaviour
 {
@@ -9,7 +9,7 @@ public class Particle : MonoBehaviour
     [SerializeField] private float _minLifeTime = 2f;
     [SerializeField] private float _maxLifeTime = 5f;
 
-    private ObjectPool<Particle> _pool;
+    private Action<Particle> _action;
     private MeshRenderer _renderer;
     private bool _wasTouched = false;
 
@@ -33,9 +33,9 @@ public class Particle : MonoBehaviour
         transform.position = position;
     }
 
-    public void Initialize(ObjectPool<Particle> pool)
+    public void Initialize(Action<Particle> action)
     {
-        _pool = pool;
+        _action = action;
     }
 
     public void ResetState()
@@ -49,13 +49,13 @@ public class Particle : MonoBehaviour
         _renderer.material.color = _onTouchColor;
         _wasTouched = true;
 
-        StartCoroutine(nameof(WaitDestroy));
+        StartCoroutine(WaitDestroy());
     }
 
     private IEnumerator WaitDestroy()
     {
         float seconds = UnityEngine.Random.Range(_minLifeTime, _maxLifeTime);
         yield return new WaitForSeconds(seconds);
-        _pool.Release(this);
+        _action?.Invoke(this);
     }
 }

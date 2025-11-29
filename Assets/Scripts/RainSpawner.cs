@@ -1,49 +1,64 @@
 using UnityEngine;
 using UnityEngine.Pool;
 
+[RequireComponent(typeof(Timer))]
 public class RainSpawner : MonoBehaviour
 {
     [SerializeField] private Particle _prefab;
     [SerializeField] private BoxCollider _spawnVolume;
     [SerializeField] int _spawnSpeed = 5;
 
+    private Timer _timer;
     private ObjectPool<Particle> _pool;
-    private float _spawnOffset = 0f;
+
+    private float _spawnTime => 1f / _spawnSpeed;
 
     private void Awake()
     {
+        _timer = GetComponent<Timer>(); 
         _pool = new ObjectPool<Particle>(
-            createFunc: OnSpawn,
-            actionOnGet: OnGet,
-            actionOnRelease: OnRelease);
+            createFunc: CreateFunction,
+            actionOnGet: ActionOnGet,
+            actionOnRelease: ActionOnRelease);
+    }
+
+    private void OnEnable()
+    {
+        _timer.Finished += Spawn;
+    }
+
+    private void OnDisable()
+    {
+        _timer.Finished -= Spawn;
     }
 
     private void Start()
     {
-        InvokeRepeating(nameof(Spawn), _spawnOffset, 1.0f / _spawnSpeed);
+        _timer.Set(_spawnTime);
     }
 
     private void Spawn()
     {
         _pool.Get();
+        _timer.Set(_spawnTime);
     }
 
-    private void OnRelease(Particle particle)
+    private void ActionOnRelease(Particle particle)
     {
         particle.gameObject.SetActive(false);
     }
 
-    private void OnGet(Particle particle)
+    private void ActionOnGet(Particle particle)
     {
         particle.SetPosition(GetPosition());
         particle.ResetState();
         particle.gameObject.SetActive(true);
     }
 
-    private Particle OnSpawn()
+    private Particle CreateFunction()
     {
         Particle particle = Instantiate(_prefab);
-        particle.Initialize(_pool);
+        particle.Initialize(_pool.Release);
         return particle;
     }
 
